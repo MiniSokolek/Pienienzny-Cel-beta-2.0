@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wykres oszczędności</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212; /* Ciemne tło */
+            color: #ffffff; /* Jasny tekst */
+            text-align: center;
+            margin: 20px;
+        }
+        canvas {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        input {
+            width: 150px;
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+            background-color: #333333; /* Ciemne pole */
+            color: #ffffff; /* Jasny tekst */
+            border: 1px solid #444444;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #1e88e5; /* Niebieski */
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #1565c0; /* Ciemniejszy niebieski */
+        }
+        #amount {
+            font-weight: bold;
+            font-size: 24px;
+            transition: color 0.2s ease;
+        }
+        #message {
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Oszczędności</h1>
+    <p style="font-size: 18px;">Aktualna kwota: <span id="amount">0.00</span> zł</p>
+    <input type="number" id="value" placeholder="Wpisz kwotę" step="0.01">
+    <br>
+    <button onclick="addMoney()">Dodaj</button>
+    <button onclick="subtractMoney()">Odejmij</button>
+    <button onclick="resetChart()">Reset</button>
+    <canvas id="savingsChart" width="800" height="400"></canvas>
+    <p id="message"></p>
+
+    <script>
+        // Inicjalizacja danych z Local Storage lub domyślnych wartości
+        let amount = parseFloat(localStorage.getItem('amount')) || 0;
+        let data = JSON.parse(localStorage.getItem('data')) || [0];
+        let labels = JSON.parse(localStorage.getItem('labels')) || ["Start"];
+
+        // Wyświetlenie aktualnej kwoty
+        const amountElement = document.getElementById("amount");
+        amountElement.innerText = amount.toFixed(2);
+
+        // Inicjalizacja wykresu
+        const ctx = document.getElementById('savingsChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Oszczędności (zł)',
+                    data: data,
+                    borderColor: '#ffffff', // Domyślnie biały
+                    tension: 0.3,
+                    fill: false,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#ffffff' // Jasny kolor osi
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.2)', // Linie siatki w tle
+                            lineWidth: 1
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#ffffff' // Jasny kolor osi
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.2)', // Linie siatki w tle
+                            lineWidth: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff' // Jasny kolor legendy
+                        }
+                    }
+                }
+            }
+        });
+
+        // Funkcja dodawania pieniędzy
+        function addMoney() {
+            const value = parseFloat(document.getElementById("value").value);
+            if (!isNaN(value) && value > 0) {
+                amount += value;
+                updateChart(`Dodano ${value.toFixed(2)} zł`, '#4caf50'); // Zielona linia dla dodania
+            } else {
+                alert("Wprowadź prawidłową kwotę!");
+            }
+        }
+
+        // Funkcja odejmowania pieniędzy
+        function subtractMoney() {
+            const value = parseFloat(document.getElementById("value").value);
+            if (!isNaN(value) && value > 0) {
+                amount -= value;
+                updateChart(`Odjęto ${value.toFixed(2)} zł`, '#ff5252'); // Czerwona linia dla odejmowania
+            } else {
+                alert("Wprowadź prawidłową kwotę!");
+            }
+        }
+
+        // Funkcja resetowania wykresu
+        function resetChart() {
+            amount = 0;
+            data = [0];
+            labels = ["Start"];
+
+            // Zapis resetu do Local Storage
+            localStorage.setItem('amount', amount.toFixed(2));
+            localStorage.setItem('data', JSON.stringify(data));
+            localStorage.setItem('labels', JSON.stringify(labels));
+
+            // Aktualizacja interfejsu
+            amountElement.innerText = amount.toFixed(2);
+            document.getElementById("message").innerText = "";
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
+
+        // Aktualizacja wykresu i kwoty
+        function updateChart(action, color) {
+            // Aktualizacja wartości
+            amountElement.innerText = amount.toFixed(2);
+
+            // Zmiana koloru tekstu w zależności od akcji
+            amountElement.style.color = color;
+
+            // Dodanie nowej wartości do wykresu
+            data.push(amount);
+            labels.push(action);
+
+            // Zmiana koloru linii w zależności od akcji
+            chart.data.datasets[0].borderColor = color;
+
+            // Zapis danych do Local Storage
+            localStorage.setItem('amount', amount.toFixed(2));
+            localStorage.setItem('data', JSON.stringify(data));
+            localStorage.setItem('labels', JSON.stringify(labels));
+
+            chart.update();
+
+            // Sprawdzenie, czy osiągnięto 100 zł
+            if (amount >= 100) {
+                document.getElementById("message").innerText = "Brawo! Uzbierałeś 100 zł!";
+            } else {
+                document.getElementById("message").innerText = ""; // Czyści komunikat
+            }
+        }
+    </script>
+</body>
+</html>
